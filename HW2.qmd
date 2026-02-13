@@ -4,7 +4,6 @@ subtitle: "Replicate causal inference identification strategies in Stokes (2015)
 author: "Kylie Newcomer"
 format:
   html:
-    theme: sketchy
     css: styles.css
 date: "February 4, 2026"
 ---
@@ -85,7 +84,7 @@ library(scales) # plotting
 
 **1A.Q1** Summarize the environmental policy issue, the outcome of interest, and the intervention being evaluated. Be sure to include a brief description of each of the following key elements of the study: unit of analysis, outcome, treatment, comparison group):
 
-*Response:* This study examines the effects of proposed and operational wind turbines on the changes of votes for the incumbent political party in Ontario, Canada. The unit of analysis is the precincts, that are treated by proposed turbines and compared with precincts without proposed turbines. The outcome of the study is the percent of votes for the incumbent (liberal) party following three elections.
+*Response:* This study examines the effects of proposed and operational wind turbines on the changes of votes for the incumbent political party in Ontario, Canada. The unit of analysis is the precincts, that are treated by proposed turbines and compared with precincts without proposed turbines. The outcome of the study is the percent of votes for the incumbent (liberal) party following three elections. The treatment is proposed or operational wind turbines within 3km of the precinct.
 
 **1A.Q2** Why might turbine proposals be correlated with baseline political preferences or rural areas? Provide 2 plausible mechanisms, and explain why that creates confounding.
 
@@ -105,7 +104,7 @@ library(scales) # plotting
 
 **1B.Q3** What part of the SUTVA assumption is most likely violated in the context of this study design (and why)?
 
-*Response:* The STUVA assumption is likely violated from spillover effect. It is likely that a proposed turbine in a different precinct would still impact other precincts.
+*Response:* The STUVA assumption is likely violated from spillover effect. It is likely that a proposed turbine in a different precinct would still impact other precincts, because the turbine can be seen from greater than 3km away.
 
 **1B.Q4** Why does spillover matter when estimating an unbiased treatment effect?
 
@@ -113,7 +112,7 @@ library(scales) # plotting
 
 **1B.Q5** How do the authors assess the risk of spillovers, and what analytic choice do they make to attempt to mitigate the risk that spillover biases the causal estimate?
 
-*Response:* In this study, spillover is regarded as spillover from precincts due to people seeing turbines from further away than the 3 km threshold.
+*Response:* In this study, spillover is regarded as spillover from precincts due to people seeing turbines from further away than the 3 km threshold. Stokes accounts for this by excluding precincts less than 6km from wind turbines as the control, creating a buffer.
 
 ------------------------------------------------------------------------
 
@@ -141,7 +140,7 @@ match_data <- read_csv(here("data", "stokes15_survey2007.csv")) %>%
 
 **2A.Q1** Intuition check: **Why match?** Explain rationale for using this method.
 
-*Response:* In this study there are far more untreated than treated precincts. By matching, we can validate causal inference and limit any bias through treatment assignment.
+*Response:* In this study there are far more untreated than treated precincts. By matching, we can validate causal inference and limit any bias through treatment assignment. There is also variation between precincts, so matching will pair control and treated precincts with similar demographics that potentially influence voting.
 
 ------------------------------------------------------------------------
 
@@ -536,11 +535,15 @@ summ(model1_ff, model.fit = FALSE, robust = TRUE, digits = 3)
 
 **3C.Q2:** Re-run the `summ()` function using the *heteroscedasticiy robust standard error adjustment* (`robust = TRUE`). Did the standard error (S.E.) estimates change? Explain why.
 
-*Response:* The SE increased from 0.031 to **0.039**, most likely due to the fact that the variance of the residuals were not constant.
+*Response:* The SE increased from 0.031 to **0.039**, most likely due to the fact that the variance of the residuals were not constant. A robust standard error is able to account for heteroskedasticity, which increased SE estimates and makes a more conservative estimate for effect.
 
 **3C.Q3:** Compare results of the model above to the findings from the fixed effects analysis in the Stokes (2015) study. Why might the results be similar or different?
 
-*Response:* The Stokes 2015 study found that proposed wind turbines decreased the vote for the incumbent party by about 5%, which is similar to our results of a decrease by 5.7%. It is likely different due to the random sampling used to simulate the data.
+Your interpretation is missing a comparison — make sure to note that the decrease in liberal vote
+share is relative to a counterfactual, not simply a standalone change. Also, units should be
+percentage points, not percent
+
+*Response:* The Stokes 2015 study found that proposed wind turbines decreased the vote for the incumbent party by about 0.05 relative to the control, which is similar to our results of a decrease by 0.057. While both estimates show a decrease in incumbent vote shares, our estimate was less precise as seen in the larger p value It is likely different due to the random sampling of 40 precincts used to simulate the data, and a more general specification of the model.
 
 **3C.Q4:** In your own words, explain why it is advantageous from a causal inference perspective to include year and precinct fixed effects. Explain how between-level and within-level variance is relevant to the problem of omitted variable bias (OVB).
 
@@ -555,7 +558,7 @@ See vignette here: [fixest walkthrough](https://cran.r-project.org/web/packages/
 ```{r}
 
 model2_ff <- feols(
-    perc_lib ~ proposed_turbine,
+    perc_lib ~ proposed_turbine | precinct_id + year,
     data = panel_data
 )
 
@@ -566,7 +569,7 @@ summary(model2_ff, cluster = ~precinct_id)
 
 In panel data settings, why is clustering by precinct important (i.e., `cluster = ~precinct_id`) ?”
 
-*Response (4-6 sentences):* On average, proposed turbines within 3km of a precinct are estimated to decrease the incumbent vote share by 10% in that precinct. This is taking into account the fixed effects of unobserved variables that may impact indirectly impact the voting results. Clustering the precincts is important because the precinct are repeated in the data for each year. This means that observations of precinct each year are not independent of each other and must be accounted for.
+*Response (4-6 sentences):* On average, proposed turbines within 3km of a precinct are estimated to decrease the incumbent vote share by 0.1, compared to the control. This is taking into account the fixed effects of unobserved variables that may impact indirectly impact the voting results. Clustering the precincts is important because the precinct are repeated in the data for each year. This means that observations of precinct each year are not independent of each other and must be accounted for.
 
 ------------------------------------------------------------------------
 
@@ -574,7 +577,7 @@ In panel data settings, why is clustering by precinct important (i.e., `cluster 
 
 ```{r}
 
-model3_ff <- feols(perc_lib ~ operational_turbine, 
+model3_ff <- feols(perc_lib ~ operational_turbine  + precinct_id + year, 
                   data = panel_data)
 
 summary(model3_ff, cluster = ~precinct_id)
